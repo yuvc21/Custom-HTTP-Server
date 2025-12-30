@@ -116,12 +116,14 @@ text
 
 Install dependencies (Ubuntu/Debian)
 
-sudo apt update
-sudo apt install -y build-essential cmake g++ git
-Install vcpkg (optional, for dependencies)
+vcpkg is a free, open-source, cross-platform C/C++ package manager from Microsoft that simplifies finding, downloading, building, and integrating libraries
+    
+    sudo apt update
+    sudo apt install -y build-essential cmake g++ git
+    Install vcpkg (optional, for dependencies)
 
-git clone https://github.com/microsoft/vcpkg.git
-./vcpkg/bootstrap-vcpkg.sh
+    git clone https://github.com/microsoft/vcpkg.git
+    ./vcpkg/bootstrap-vcpkg.sh
 
 text
 
@@ -129,21 +131,25 @@ text
 
 Clone the repository
 
-git clone https://github.com/yourusername/custom-http-server.git
-cd custom-http-server
+    git clone https://github.com/yourusername/custom-http-server.git
+    cd custom-http-server
+    
 Create build directory
 
-mkdir -p build && cd build
+    mkdir -p build && cd build
+    
 Configure with CMake
 
-cmake ..
+    cmake ..
+    
 Compile
 
-cmake --build .
+    cmake --build .
+    
 Run the server
 
-cd ..
-./your_program.sh
+    cd ..
+    ./your_program.sh
 
 text
 
@@ -155,10 +161,11 @@ text
 
 Default: Listens on 0.0.0.0:4221
 
-./your_program.sh
+    ./your_program.sh
+    
 With custom directory (future feature)
 
-./your_program.sh --directory /path/to/files
+    ./your_program.sh --directory /path/to/files
 
 text
 
@@ -166,14 +173,16 @@ text
 
 **Test Root Endpoint**
 
-curl -v http://localhost:4221/
+    curl -v http://localhost:4221/
+    
 Response: HTTP/1.1 200 OK
 
 text
 
 **Test Echo Endpoint**
 
-curl -v http://localhost:4221/echo/hello
+    curl -v http://localhost:4221/echo/hello
+    
 Response:
 HTTP/1.1 200 OK
 Content-Type: text/plain
@@ -184,12 +193,106 @@ text
 
 **Test 404 Response**
 
-curl -v http://localhost:4221/nonexistent
+    curl -v http://localhost:4221/nonexistent
+    
 Response: HTTP/1.1 404 Not Found
 
 text
 
 ---
+
+# HTTP Server Testing Guide
+
+# HTTP Server Testing Guide
+🧪 Concurrent Connection Testing
+
+    Test Setup
+
+        Start server: ./your_program.sh --directory /tmp
+
+    Test 1: 3 concurrent requests
+
+        curl http://localhost:4221/files/file1.txt &
+
+        curl http://localhost:4221/files/file2.txt &
+
+        curl http://localhost:4221/files/file3.txt &
+
+        wait
+
+    Test 2: 10 concurrent same file
+
+        for i in {1..10}; do curl -s http://localhost:4221/files/foo &; done
+
+        wait
+
+    Test 3: 100+ stress test
+
+        for i in {1..150}; do curl -s http://localhost:4221/files/foo > /dev/null &; done
+
+        wait
+
+        echo "✅ 150 concurrent requests completed"
+
+    Test 4: Mixed endpoints
+
+        for i in {1..20}; do curl -s http://localhost:4221/files/foo & curl -s http://localhost:4221/echo/test &; done
+
+        wait
+
+    Expected Result - All requests complete successfully without crashes or connection errors
+
+🧪 GET /files/ Testing
+
+    Test Setup
+
+        Create test files: echo -n 'Hello World!' > /tmp/foo
+
+        Create test files: echo -n 'Test data' > /tmp/test.txt
+
+    Test 1: Basic GET
+
+        Command: curl -i http://localhost:4221/files/foo
+
+        Expected: HTTP/1.1 200 OK with "Hello World!"
+
+    Test 2: Different files
+
+        Command: curl -i http://localhost:4221/files/test.txt
+
+        Expected: HTTP/1.1 200 OK with "Test data"
+
+    Test 3: File not found
+
+        Command: curl -i http://localhost:4221/files/nonexistent.txt
+
+        Expected: HTTP/1.1 404 Not Found
+
+    Test 4: Echo endpoint
+
+        Command: curl -i http://localhost:4221/echo/hello
+
+        Expected: HTTP/1.1 200 OK with "hello"
+
+    Test 5: Root path
+
+        Command: curl -i http://localhost:4221/
+
+        Expected: HTTP/1.1 200 OK
+
+
+## Success Indicators
+- ✅ 200 OK with correct file content
+- ✅ 404 for missing files
+- ✅ Proper Content-Type and Content-Length headers
+
+
+text
+
+**Success Indicators:**
+- ✅ 200 OK with correct file content
+- ✅ 404 for missing files
+- ✅ Proper Content-Type and Content-Length headers
 
 ## 🌐 API Endpoints
 
@@ -226,17 +329,29 @@ text
 ### Request Flow
 
 Client Request
+
 ↓
+
 TCP Socket (Port 4221)
+
 ↓
+
 Server::acceptConnection()
+
 ↓
+
 HttpParser::extractPath()
+
 ↓
+
 HttpParser::generateResponse()
+
 ↓
+
 send() to client
+
 ↓
+
 close() connection
 
 text
@@ -244,20 +359,25 @@ text
 ### HTTP Parser Design
 
 namespace HttpParser {
-// Extract URL path from raw HTTP request
-std::string extractPath(const std::string& request);
+    // extracting URL path from HTTP request
+    std::string extractPath(const std::string& request);
 
-text
-// Check if path matches /echo/ pattern
-bool isEchoPath(const std::string& path);
+    // generating response based on path
+    std::string generateResponse(const std::string& path, const std::string &directory);
 
-// Extract string after /echo/
-std::string extractEchoString(const std::string& path);
+    // checking if the path starts with /echo/
+    bool isEchoPath(const std::string& path);
 
-// Generate complete HTTP response
-std::string generateResponse(const std::string& path);
+    // extracting the string after /echo/
+    std::string extractEchoString(const std::string& path);
 
+    // functions for file handling
+    bool isFilePath(const std::string& path);
+    std::string extractFileName(const std::string &path);
+    std::string readFile(const std::string& filePath);
+    bool fileExists(const std::string& filePath);
 }
+
 
 text
 
@@ -269,13 +389,14 @@ text
 
 Start server in one terminal
 
-./your_program.sh
+    ./your_program.sh
+
 Test in another terminal
 
-curl -v http://localhost:4221/
-curl -v http://localhost:4221/echo/test
-curl -v http://localhost:4221/echo/hello%20world
-curl -v http://localhost:4221/invalid
+    - curl -v http://localhost:4221/
+    - curl -v http://localhost:4221/echo/test
+    - curl -v http://localhost:4221/echo/hello%20world
+    - curl -v http://localhost:4221/invalid
 
 text
 
@@ -283,9 +404,9 @@ text
 
 Run official tests
 
-git add .
-git commit -m "Implement feature"
-git push origin master
+    - git add .
+    - git commit -m "Implement feature"
+    - git push origin master
 
 text
 
@@ -293,7 +414,7 @@ text
 
 Test concurrent connections
 
-ab -n 1000 -c 100 http://localhost:4221/
+    ab -n 1000 -c 100 http://localhost:4221/
 
 text
 

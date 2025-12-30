@@ -131,7 +131,7 @@ text
 
 Clone the repository
 
-    git clone https://github.com/yourusername/custom-http-server.git
+    git clone https://github.com/yuvc21/custom-http-server.git
     cd custom-http-server
     
 Create build directory

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Custom HTTP Server
 
 <div align="center">

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Custom HTTP Server
 
 <div align="center">
@@ -494,3 +495,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <div align="center">
 
 Made with ❤️ and C++
+=======
+# Custom-HTTP-Server
+>>>>>>> 7ab854b550ab6073d27c8e578aeb7cba05e3f070

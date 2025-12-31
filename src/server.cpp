@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iostream>
 #include <sys/socket.h> // send(), recv(), socket(), bind(), listen(), accept()
+#include <thread>
 // these calls are system calls they are part of operating system's(linux here)
 // API for network programming not function of CPP and are somewhat different
 // for windows
@@ -14,9 +15,11 @@ send(client_socket, response.c_str(), response.length(), 0);
 
  Your program asks the Linux kernel:
  "Please send this data through network socket #X"
- */
+*/
 
-Server::Server() : server_fd(-1) {}
+Server::Server(const std::string &directory)
+    : server_fd(-1), filesDirectory(directory) {}
+
 Server::~Server() {
   if (server_fd >= 0) {
     close(server_fd);
@@ -71,23 +74,54 @@ int Server::acceptClient() {
 
   return client_fd;
 }
+
+void Server::start() {
+  std::cout << "Server is running on port 4221...." << std::endl;
+
+  // infinite loop to keep accepting connections
+  while (true) {
+    int client_fd = acceptClient();
+
+    if (client_fd < 0) {
+      std::cerr << "Failed to accept client" << std::endl;
+      continue; // skipping the current iteration, trying again
+    }
+
+    // starting new thread to handle this client concurrently!!!
+    std::thread clientThread([this, client_fd] { handleClient(client_fd); });
+
+    // detatching the thread(runs independently, doesn't block)
+    clientThread.detach();
+
+    // server immidiately ready for next client
+    std::cout << "Client spawned in new thread, ready for next..." << std::endl;
+  }
+}
 void Server::handleClient(int client_fd) {
-  // reading the request;
-  char buffer[1024] = {0};
+  // reading the request
+  char buffer[4096] = {0};
   read(client_fd, buffer, sizeof(buffer));
 
-  // parsing path from the request;
   std::string request(buffer);
+
+  // extracting path
   std::string path = HttpParser::extractPath(request);
 
-  std::cout << "Request Path: " << path << std::endl;
+  // extracting the method
+  std::string method = HttpParser::extractMethod(request);
 
-  // generating response based on path;
-  std::string response = HttpParser::generateResponse(path);
+  // extracting body
+  std::string body = HttpParser::extractBody(request);
 
-  // sending response;
+  std::cout << "Request: " << method << " " << path << std::endl;
+
+  // generating responses with method support
+  std::string response =
+      HttpParser::generateResponse(method, path, body, filesDirectory);
+
+  // sending response
   send(client_fd, response.c_str(), response.length(), 0);
 
-  // closing the client connection;
+  // closing the client connection
   close(client_fd);
 }

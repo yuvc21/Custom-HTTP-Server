@@ -495,5 +495,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Made with ❤️ and C++
 =======
-# Custom-HTTP-Server
->>>>>>> 7ab854b550ab6073d27c8e578aeb7cba05e3f070

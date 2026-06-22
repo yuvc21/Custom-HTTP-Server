@@ -17,6 +17,10 @@ An HTTP/1.1 server built from scratch in C++ as part of the [CodeCrafters](https
 
 - [Overview](#overview)
 - [Features](#features)
+- [What is HTTP/1.1](#what-is-http11)
+- [What are POSIX Sockets](#what-are-posix-sockets)
+- [How GZIP Compression Works](#how-gzip-compression-works)
+- [How Threading Works Here](#how-threading-works-here)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Installation](#installation)
@@ -50,6 +54,115 @@ Built as part of the CodeCrafters "Build Your Own HTTP Server" challenge.
 - **File Serving** — GET `/files/{name}` serves files from a configurable directory
 - **File Upload** — POST `/files/{name}` writes request body to disk
 - **GZIP Compression** — compresses responses when client sends `Accept-Encoding: gzip`
+
+---
+
+## What is HTTP/1.1
+
+HTTP (HyperText Transfer Protocol) is the foundation of data communication on the web. Version 1.1, defined in [RFC 9112](https://datatracker.ietf.org/doc/html/rfc9112), is the most widely deployed version and introduced several improvements over HTTP/1.0.
+
+An HTTP request looks like this:
+
+```
+GET /echo/hello HTTP/1.1
+Host: localhost:4221
+Accept-Encoding: gzip
+User-Agent: curl/7.81.0
+
+```
+
+And a response looks like this:
+
+```
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Content-Length: 5
+
+hello
+```
+
+Every HTTP message has three parts:
+- **Request/Status line** — the method, path, and protocol version (or status code for responses)
+- **Headers** — key-value metadata like `Content-Type`, `Content-Length`, `Accept-Encoding`
+- **Body** — the actual payload, separated from headers by `\r\n\r\n`
+
+This server manually parses each of these from the raw byte stream received over the socket, with no help from any HTTP library.
+
+Key HTTP/1.1 improvements over 1.0:
+- Persistent connections (Keep-Alive by default)
+- Chunked transfer encoding
+- The `Host` header is mandatory
+- Better caching controls
+
+---
+
+## What are POSIX Sockets
+
+POSIX sockets are a standard API for network communication on Unix-based systems (Linux, macOS). They allow programs to send and receive data over a network using the same `read()`/`write()` model as files.
+
+The lifecycle of a TCP server socket looks like this:
+
+```
+socket()   → create a socket file descriptor
+bind()     → attach it to an IP address and port
+listen()   → mark it as passive (ready to accept)
+accept()   → block until a client connects, return a new fd
+recv()     → read data from the client
+send()     → write data back to the client
+close()    → close the connection
+```
+
+In this server, all of this is done manually using system calls from `<sys/socket.h>` and `<unistd.h>`. There is no Boost.Asio, no libuv, no abstraction layer — just direct calls into the Linux kernel.
+
+When you call `send(client_fd, response.c_str(), response.length(), 0)`, your program is asking the Linux kernel to take that buffer and push it out through the network interface. The kernel handles the actual TCP segmentation, checksums, retransmission, and delivery.
+
+---
+
+## How GZIP Compression Works
+
+GZIP is a file format and compression algorithm based on DEFLATE (a combination of LZ77 and Huffman coding). It is the most common HTTP compression format.
+
+When a client (like curl or a browser) supports compression, it sends:
+
+```
+Accept-Encoding: gzip
+```
+
+The server sees this header, compresses the response body using zlib, and responds with:
+
+```
+Content-Encoding: gzip
+Content-Length: <compressed size>
+```
+
+The client then decompresses the body transparently before handing it to the application.
+
+In this server, compression is done using zlib's `deflate` API with `windowBits = 15 + 16` (the `+16` enables gzip wrapping instead of raw DEFLATE):
+
+```cpp
+deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+```
+
+GZIP is particularly effective for text-based responses (HTML, JSON, plain text) where repeated patterns compress well. Binary files like images or already-compressed formats gain little to nothing from it.
+
+---
+
+## How Threading Works Here
+
+By default, `accept()` is a blocking call — it halts the program until a client connects. If you handle each client in the same thread, the server can only serve one client at a time. While handling client A, client B waits.
+
+This server solves that by spawning a new `std::thread` for every incoming connection:
+
+```cpp
+std::thread clientThread([this, client_fd] { handleClient(client_fd); });
+clientThread.detach();
+```
+
+`detach()` means the thread runs independently — the main thread immediately loops back to `accept()` and is ready for the next client without waiting for the previous one to finish.
+
+Each thread gets its own stack and handles exactly one client: read request → parse → generate response → send → close. Once done, the thread exits and its resources are cleaned up automatically.
+
+This is a simple one-thread-per-connection model. It works well for moderate loads (100+ concurrent connections). For extremely high concurrency, more advanced patterns like thread pools or async I/O (epoll) would be used instead.
 
 ---
 
@@ -220,6 +333,7 @@ for i in {1..20}; do curl -s http://localhost:4221/echo/test & done; wait && ech
 - [x] Static file serving (GET)
 - [x] File upload (POST)
 - [x] GZIP compression
+
 
 ---
 

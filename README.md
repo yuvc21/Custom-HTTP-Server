@@ -221,12 +221,6 @@ for i in {1..20}; do curl -s http://localhost:4221/echo/test & done; wait && ech
 - [x] File upload (POST)
 - [x] GZIP compression
 
-### Phase 3 — Improvements
-- [ ] Keep-Alive connections
-- [ ] Request timeout handling
-- [ ] Proper logging
-- [ ] HTTPS/TLS support
-
 ---
 
 ## License

@@ -7,18 +7,20 @@
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 ![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
-A high-performance HTTP/1.1 server built from scratch in C++ as part of the [CodeCrafters](https://codecrafters.io) challenge.
-
-[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Architecture](#architecture) • [Roadmap](#roadmap)
+An HTTP/1.1 server built from scratch in C++ as part of the [CodeCrafters](https://codecrafters.io) challenge.
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
+- [What is HTTP/1.1](#what-is-http11)
+- [What are POSIX Sockets](#what-are-posix-sockets)
+- [How GZIP Compression Works](#how-gzip-compression-works)
+- [How Threading Works Here](#how-threading-works-here)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Installation](#installation)
@@ -27,471 +29,330 @@ A high-performance HTTP/1.1 server built from scratch in C++ as part of the [Cod
 - [Architecture](#architecture)
 - [Testing](#testing)
 - [Roadmap](#roadmap)
-- [Contributing](#contributing)
 - [License](#license)
+- [Acknowledgments](#acknowledgments)
 
 ---
 
-## 🎯 Overview
+## Overview
 
-A lightweight, efficient HTTP/1.1 server implementation written in modern C++. This project demonstrates low-level network programming, HTTP protocol implementation, and system design principles.
+A lightweight HTTP/1.1 server written in modern C++ using raw POSIX sockets — no external HTTP libraries. Handles TCP connections, parses HTTP requests, generates compliant responses, serves static files, and supports gzip compression.
 
-Built as part of the CodeCrafters "Build Your Own HTTP Server" challenge, this server handles TCP connections, parses HTTP requests, generates compliant responses, and serves content efficiently.
-
-### Key Highlights
-
-- **Pure C++ Implementation**: No external HTTP libraries used
-- **HTTP/1.1 Compliant**: Follows RFC 9112 specifications
-- **POSIX Socket Programming**: Direct system call usage for network operations
-- **Efficient Request Parsing**: Custom HTTP parser with zero-copy optimizations
-- **Modular Architecture**: Clean separation of concerns for maintainability
+Built as part of the CodeCrafters "Build Your Own HTTP Server" challenge.
 
 ---
 
-## ✨ Features
+## Features
 
-### Currently Implemented ✅
-
-- ✅ **TCP Socket Server** - Binds to port 4221 and accepts incoming connections
-- ✅ **HTTP Request Parsing** - Extracts method, path, and headers from raw requests
-- ✅ **HTTP Response Generation** - Properly formatted responses with status lines and headers
-- ✅ **Status Codes** - Supports `200 OK` and `404 Not Found`
-- ✅ **Dynamic Routing** - Path-based request handling
-- ✅ **Echo Endpoint** - `/echo/{str}` returns the provided string with proper headers
-- ✅ **Content Headers** - `Content-Type` and `Content-Length` calculation
-- ✅ **User-Agent Parsing** - Extract and return User-Agent header
-- ✅ **Concurrent Connections** - Multi-threading for 100+ simultaneous clients
-- ✅ **File Serving** - Static file delivery with proper MIME types
-- ✅ **POST Support** - Handle file uploads and data submission
-- ✅ **GZIP Compression** - Reduce bandwidth usage by 40%
+- **TCP Socket Server** — binds to port 4221, accepts incoming connections
+- **HTTP Request Parsing** — extracts method, path, headers, and body from raw requests
+- **Dynamic Routing** — path-based request handling
+- **Status Codes** — `200 OK`, `201 Created`, `404 Not Found`, `500 Internal Server Error`
+- **Echo Endpoint** — `/echo/{str}` echoes back the provided string
+- **Content Headers** — correct `Content-Type` and `Content-Length` on all responses
+- **Concurrent Connections** — one thread per client via `std::thread`
+- **File Serving** — GET `/files/{name}` serves files from a configurable directory
+- **File Upload** — POST `/files/{name}` writes request body to disk
+- **GZIP Compression** — compresses responses when client sends `Accept-Encoding: gzip`
 
 ---
 
-## 🛠️ Tech Stack
+## What is HTTP/1.1
 
-| Component | Technology |
-|-----------|-----------|
-| **Language** | C++17 |
-| **Build System** | CMake 3.20+ |
-| **Package Manager** | vcpkg |
-| **Network API** | POSIX Sockets (`sys/socket.h`) |
-| **Protocol** | HTTP/1.1 (RFC 9112) |
-| **Platform** | Linux (Ubuntu/Debian recommended) |
+HTTP (HyperText Transfer Protocol) is the foundation of data communication on the web. Version 1.1, defined in [RFC 9112](https://datatracker.ietf.org/doc/html/rfc9112), is the most widely deployed version and introduced several improvements over HTTP/1.0.
 
----
-## 📁 Source Structure
+An HTTP request looks like this:
 
-- `src/` - Source code directory
-  - `main.cpp` - Entry point and server initialization
-  - `server.cpp` - TCP socket server implementation
-  - `server.hpp` - Server class declaration
-  - `http_parser.cpp` - HTTP request parsing and response generation
-  - `http_parser.hpp` - HTTP parser interface and function declarations
+```
+GET /echo/hello HTTP/1.1
+Host: localhost:4221
+Accept-Encoding: gzip
+User-Agent: curl/7.81.0
 
-text
+```
 
-### Core Components
+And a response looks like this:
 
-**`server.cpp/hpp`**
-- TCP socket initialization
-- Client connection management
-- Request/response lifecycle handling
-
-**`http_parser.cpp/hpp`**
-- Path extraction from HTTP requests
-- Response generation with headers
-- Echo endpoint implementation
-- Route matching logic
-
-**`main.cpp`**
-- Server initialization
-- Command-line argument handling
-- Main event loop
-
----
-
-## 🚀 Installation
-
-### Prerequisites
-
-Install dependencies (Ubuntu/Debian)
-
-vcpkg is a free, open-source, cross-platform C/C++ package manager from Microsoft that simplifies finding, downloading, building, and integrating libraries
-    
-    sudo apt update
-    sudo apt install -y build-essential cmake g++ git
-    Install vcpkg (optional, for dependencies)
-
-    git clone https://github.com/microsoft/vcpkg.git
-    ./vcpkg/bootstrap-vcpkg.sh
-
-text
-
-### Build from Source
-
-Clone the repository
-
-    git clone https://github.com/yuvc21/custom-http-server.git
-    cd custom-http-server
-    
-Create build directory
-
-    mkdir -p build && cd build
-    
-Configure with CMake
-
-    cmake ..
-    
-Compile
-
-    cmake --build .
-    
-Run the server
-
-    cd ..
-    ./your_program.sh
-
-text
-
----
-
-## 💻 Usage
-
-### Starting the Server
-
-Default: Listens on 0.0.0.0:4221
-
-    ./your_program.sh
-    
-With custom directory (future feature)
-
-    ./your_program.sh --directory /path/to/files
-
-text
-
-### Example Requests
-
-**Test Root Endpoint**
-
-    curl -v http://localhost:4221/
-    
-Response: HTTP/1.1 200 OK
-
-text
-
-**Test Echo Endpoint**
-
-    curl -v http://localhost:4221/echo/hello
-    
-Response:
+```
 HTTP/1.1 200 OK
 Content-Type: text/plain
 Content-Length: 5
+
 hello
+```
 
-text
+Every HTTP message has three parts:
+- **Request/Status line** — the method, path, and protocol version (or status code for responses)
+- **Headers** — key-value metadata like `Content-Type`, `Content-Length`, `Accept-Encoding`
+- **Body** — the actual payload, separated from headers by `\r\n\r\n`
 
-**Test 404 Response**
+This server manually parses each of these from the raw byte stream received over the socket, with no help from any HTTP library.
 
-    curl -v http://localhost:4221/nonexistent
-    
-Response: HTTP/1.1 404 Not Found
-
-text
-
----
-
-# HTTP Server Testing Guide
-
-# HTTP Server Testing Guide
-🧪 Concurrent Connection Testing
-
-    Test Setup
-
-        Start server: ./your_program.sh --directory /tmp
-
-    Test 1: 3 concurrent requests
-
-        curl http://localhost:4221/files/file1.txt &
-
-        curl http://localhost:4221/files/file2.txt &
-
-        curl http://localhost:4221/files/file3.txt &
-
-        wait
-
-    Test 2: 10 concurrent same file
-
-        for i in {1..10}; do curl -s http://localhost:4221/files/foo &; done
-
-        wait
-
-    Test 3: 100+ stress test
-
-        for i in {1..150}; do curl -s http://localhost:4221/files/foo > /dev/null &; done
-
-        wait
-
-        echo "✅ 150 concurrent requests completed"
-
-    Test 4: Mixed endpoints
-
-        for i in {1..20}; do curl -s http://localhost:4221/files/foo & curl -s http://localhost:4221/echo/test &; done
-
-        wait
-
-    Expected Result - All requests complete successfully without crashes or connection errors
-
-🧪 GET /files/ Testing
-
-    Test Setup
-
-        Create test files: echo -n 'Hello World!' > /tmp/foo
-
-        Create test files: echo -n 'Test data' > /tmp/test.txt
-
-    Test 1: Basic GET
-
-        Command: curl -i http://localhost:4221/files/foo
-
-        Expected: HTTP/1.1 200 OK with "Hello World!"
-
-    Test 2: Different files
-
-        Command: curl -i http://localhost:4221/files/test.txt
-
-        Expected: HTTP/1.1 200 OK with "Test data"
-
-    Test 3: File not found
-
-        Command: curl -i http://localhost:4221/files/nonexistent.txt
-
-        Expected: HTTP/1.1 404 Not Found
-
-    Test 4: Echo endpoint
-
-        Command: curl -i http://localhost:4221/echo/hello
-
-        Expected: HTTP/1.1 200 OK with "hello"
-
-    Test 5: Root path
-
-        Command: curl -i http://localhost:4221/
-
-        Expected: HTTP/1.1 200 OK
-
-
-## Success Indicators
-- ✅ 200 OK with correct file content
-- ✅ 404 for missing files
-- ✅ Proper Content-Type and Content-Length headers
-
-
-text
-
-**Success Indicators:**
-- ✅ 200 OK with correct file content
-- ✅ 404 for missing files
-- ✅ Proper Content-Type and Content-Length headers
-
-## 🌐 API Endpoints
-
-| Method | Endpoint | Description | Status |
-|--------|----------|-------------|--------|
-| `GET` | `/` | Health check, returns 200 OK | ✅ Live |
-| `GET` | `/echo/{str}` | Returns the provided string | ✅ Live |
-| `GET` | `/user-agent` | Returns User-Agent header | ✅ Live |
-| `GET` | `/files/{filename}` | Serves static files | ✅ Live|
-| `POST` | `/files/{filename}` | Uploads files to server | ✅ Live|
-
-### Response Format
-
-**Successful Response (200 OK)**
-
-HTTP/1.1 200 OK
-Content-Type: text/plain
-Content-Length: 13
-
-Hello, World!
-
-text
-
-**Not Found Response (404)**
-
-HTTP/1.1 404 Not Found
-
-text
+Key HTTP/1.1 improvements over 1.0:
+- Persistent connections (Keep-Alive by default)
+- Chunked transfer encoding
+- The `Host` header is mandatory
+- Better caching controls
 
 ---
 
-## 🏗️ Architecture
+## What are POSIX Sockets
+
+POSIX sockets are a standard API for network communication on Unix-based systems (Linux, macOS). They allow programs to send and receive data over a network using the same `read()`/`write()` model as files.
+
+The lifecycle of a TCP server socket looks like this:
+
+```
+socket()   → create a socket file descriptor
+bind()     → attach it to an IP address and port
+listen()   → mark it as passive (ready to accept)
+accept()   → block until a client connects, return a new fd
+recv()     → read data from the client
+send()     → write data back to the client
+close()    → close the connection
+```
+
+In this server, all of this is done manually using system calls from `<sys/socket.h>` and `<unistd.h>`. There is no Boost.Asio, no libuv, no abstraction layer — just direct calls into the Linux kernel.
+
+When you call `send(client_fd, response.c_str(), response.length(), 0)`, your program is asking the Linux kernel to take that buffer and push it out through the network interface. The kernel handles the actual TCP segmentation, checksums, retransmission, and delivery.
+
+---
+
+## How GZIP Compression Works
+
+GZIP is a file format and compression algorithm based on DEFLATE (a combination of LZ77 and Huffman coding). It is the most common HTTP compression format.
+
+When a client (like curl or a browser) supports compression, it sends:
+
+```
+Accept-Encoding: gzip
+```
+
+The server sees this header, compresses the response body using zlib, and responds with:
+
+```
+Content-Encoding: gzip
+Content-Length: <compressed size>
+```
+
+The client then decompresses the body transparently before handing it to the application.
+
+In this server, compression is done using zlib's `deflate` API with `windowBits = 15 + 16` (the `+16` enables gzip wrapping instead of raw DEFLATE):
+
+```cpp
+deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+```
+
+GZIP is particularly effective for text-based responses (HTML, JSON, plain text) where repeated patterns compress well. Binary files like images or already-compressed formats gain little to nothing from it.
+
+---
+
+## How Threading Works Here
+
+By default, `accept()` is a blocking call — it halts the program until a client connects. If you handle each client in the same thread, the server can only serve one client at a time. While handling client A, client B waits.
+
+This server solves that by spawning a new `std::thread` for every incoming connection:
+
+```cpp
+std::thread clientThread([this, client_fd] { handleClient(client_fd); });
+clientThread.detach();
+```
+
+`detach()` means the thread runs independently — the main thread immediately loops back to `accept()` and is ready for the next client without waiting for the previous one to finish.
+
+Each thread gets its own stack and handles exactly one client: read request → parse → generate response → send → close. Once done, the thread exits and its resources are cleaned up automatically.
+
+This is a simple one-thread-per-connection model. It works well for moderate loads (100+ concurrent connections). For extremely high concurrency, more advanced patterns like thread pools or async I/O (epoll) would be used instead.
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Language | C++17 |
+| Build System | CMake 3.20+ |
+| Network API | POSIX Sockets (`sys/socket.h`) |
+| Compression | zlib |
+| Protocol | HTTP/1.1 (RFC 9112) |
+| Platform | Linux (Arch, Ubuntu, Debian) |
+
+---
+
+## Project Structure
+
+```
+Custom-HTTP-Server/
+├── src/
+│   ├── main.cpp           # entry point, CLI argument parsing
+│   ├── server.cpp         # TCP socket, accept loop, thread spawning
+│   ├── server.hpp
+│   ├── http_parser.cpp    # request parsing, response generation, gzip
+│   └── http_parser.hpp
+├── CMakeLists.txt
+├── run.sh                 # build + run in one shot
+└── README.md
+```
+
+---
+
+## Installation
+
+### Prerequisites
+
+**Arch Linux**
+```bash
+sudo pacman -S cmake gcc zlib
+```
+
+**Ubuntu/Debian**
+```bash
+sudo apt install cmake g++ zlib1g-dev
+```
+
+### Build and Run
+
+```bash
+git clone https://github.com/yuvc21/Custom-HTTP-Server.git
+cd Custom-HTTP-Server
+
+chmod +x run.sh
+./run.sh --directory /tmp
+```
+
+`run.sh` builds and starts the server in one shot. To rebuild from scratch:
+
+```bash
+rm -rf build/
+./run.sh --directory /tmp
+```
+
+---
+
+## Usage
+
+```bash
+# start server (serves files from /tmp)
+./run.sh --directory /tmp
+
+# or run the binary directly after building
+./build/http-server --directory /tmp
+```
+
+Server listens on `0.0.0.0:4221`.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Health check — returns `200 OK` |
+| `GET` | `/echo/{str}` | Returns `str` as plain text |
+| `GET` | `/files/{filename}` | Serves file from the configured directory |
+| `POST` | `/files/{filename}` | Writes request body to file |
+
+---
+
+## Architecture
 
 ### Request Flow
 
-Client Request
-
-↓
-
-TCP Socket (Port 4221)
-
-↓
-
-Server::acceptConnection()
-
-↓
-
-HttpParser::extractPath()
-
-↓
-
+```
+Client
+  │
+  ▼
+TCP Accept (port 4221)
+  │
+  ▼
+std::thread → handleClient()
+  │
+  ├── HttpParser::extractMethod()
+  ├── HttpParser::extractPath()
+  ├── HttpParser::extractBody()
+  ├── HttpParser::extractAcceptEncoding()
+  │
+  ▼
 HttpParser::generateResponse()
-
-↓
-
-send() to client
-
-↓
-
-close() connection
-
-text
-
-### HTTP Parser Design
-
-namespace HttpParser {
-    // extracting URL path from HTTP request
-    std::string extractPath(const std::string& request);
-
-    // generating response based on path
-    std::string generateResponse(const std::string& path, const std::string &directory);
-
-    // checking if the path starts with /echo/
-    bool isEchoPath(const std::string& path);
-
-    // extracting the string after /echo/
-    std::string extractEchoString(const std::string& path);
-
-    // functions for file handling
-    bool isFilePath(const std::string& path);
-    std::string extractFileName(const std::string &path);
-    std::string readFile(const std::string& filePath);
-    bool fileExists(const std::string& filePath);
-}
-
-
-text
+  │
+  ├── POST /files/  → write to disk → 201
+  ├── GET  /files/  → read from disk → 200
+  ├── GET  /echo/   → echo string → 200
+  ├── GET  /        → 200
+  └── anything else → 404
+  │
+  ▼
+send() → close()
+```
 
 ---
 
-## 🧪 Testing
+## Testing
 
-### Manual Testing
+Start the server in one terminal:
 
-Start server in one terminal
+```bash
+./run.sh --directory /tmp
+```
 
-    ./your_program.sh
+Then in another terminal:
 
-Test in another terminal
+```bash
+# root
+curl -i http://localhost:4221/
 
-    - curl -v http://localhost:4221/
-    - curl -v http://localhost:4221/echo/test
-    - curl -v http://localhost:4221/echo/hello%20world
-    - curl -v http://localhost:4221/invalid
+# echo
+curl -i http://localhost:4221/echo/hello
 
-text
+# 404
+curl -i http://localhost:4221/nonexistent
 
-### CodeCrafters Testing
+# upload a file, then fetch it
+curl -i -X POST http://localhost:4221/files/test.txt -d "hello server"
+curl -i http://localhost:4221/files/test.txt
 
-Run official tests
+# gzip compression
+curl -i --compressed -H "Accept-Encoding: gzip" http://localhost:4221/echo/hello
 
-    - git add .
-    - git commit -m "Implement feature"
-    - git push origin master
-
-text
-
-### Load Testing (Future)
-
-Test concurrent connections
-
-    ab -n 1000 -c 100 http://localhost:4221/
-
-text
+# concurrent stress test (20 requests)
+for i in {1..20}; do curl -s http://localhost:4221/echo/test & done; wait && echo "all done"
+```
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-### Phase 1: Core HTTP Server ✅
+### Phase 1 — Core
 - [x] TCP socket server
 - [x] HTTP request parsing
 - [x] Response generation (200, 404)
-- [x] Echo endpoint with headers
+- [x] Echo endpoint
 
-### Phase 2: Advanced Features 🚧
-- [X] User-Agent header extraction
+### Phase 2 — Features
 - [x] Multi-threaded connection handling
-- [x] Static file serving
-- [x] POST request handling
-- [x] File upload support
-
-### Phase 3: Production Ready 📅
+- [x] Static file serving (GET)
+- [x] File upload (POST)
 - [x] GZIP compression
-- [x] Keep-Alive connections
-- [x] Request timeout handling
-- [x] Logging system
-- [x] Configuration file support
-- [x] HTTPS/TLS support
+
 
 ---
 
-## 📊 Performance Targets
+## License
 
-| Metric | Target | Status |
-|--------|--------|--------|
-| Concurrent Connections | 100+ | ✅ Achieved |
-| Request Latency | < 10ms | ✅ Achieved |
-| Throughput | 10k req/s | ✅ Achieved |
-| Memory Usage | < 50MB | ✅ Achieved |
-| GZIP Bandwidth Savings | 40% | ✅ Achieved |
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Style
-
-- Follow C++17 standards
-- Use meaningful variable names
-- Add comments for complex logic
-- Keep functions focused and small
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
 ---
 
 ## Acknowledgments
 
-- **[CodeCrafters](https://codecrafters.io)** - For the excellent learning platform
-- **HTTP/1.1 Specification** - [RFC 9112](https://datatracker.ietf.org/doc/html/rfc9112)
-- **Beej's Guide to Network Programming** - Essential socket programming resource
+- [CodeCrafters](https://codecrafters.io) — for the challenge
+- [RFC 9112](https://datatracker.ietf.org/doc/html/rfc9112) — HTTP/1.1 spec
+- [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/) — socket programming reference
 
 ---
-
 
 <div align="center">
 
 Made with ❤️ and C++
-=======
+
+</div>

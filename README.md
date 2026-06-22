@@ -9,13 +9,28 @@
 
 An HTTP/1.1 server built from scratch in C++ as part of the [CodeCrafters](https://codecrafters.io) challenge.
 
-[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Architecture](#architecture) • [Roadmap](#roadmap)
-
 </div>
 
 ---
 
-## 🎯 Overview
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Usage](#usage)
+- [API Endpoints](#api-endpoints)
+- [Architecture](#architecture)
+- [Testing](#testing)
+- [Roadmap](#roadmap)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+
+---
+
+## Overview
 
 A lightweight HTTP/1.1 server written in modern C++ using raw POSIX sockets — no external HTTP libraries. Handles TCP connections, parses HTTP requests, generates compliant responses, serves static files, and supports gzip compression.
 
@@ -23,22 +38,22 @@ Built as part of the CodeCrafters "Build Your Own HTTP Server" challenge.
 
 ---
 
-## ✨ Features
+## Features
 
-- ✅ **TCP Socket Server** — binds to port 4221, accepts incoming connections
-- ✅ **HTTP Request Parsing** — extracts method, path, headers, and body from raw requests
-- ✅ **Dynamic Routing** — path-based request handling
-- ✅ **Status Codes** — `200 OK`, `201 Created`, `404 Not Found`, `500 Internal Server Error`
-- ✅ **Echo Endpoint** — `/echo/{str}` echoes back the provided string
-- ✅ **Content Headers** — correct `Content-Type` and `Content-Length` on all responses
-- ✅ **Concurrent Connections** — one thread per client via `std::thread`
-- ✅ **File Serving** — GET `/files/{name}` serves files from a configurable directory
-- ✅ **File Upload** — POST `/files/{name}` writes request body to disk
-- ✅ **GZIP Compression** — compresses responses when client sends `Accept-Encoding: gzip`
+- **TCP Socket Server** — binds to port 4221, accepts incoming connections
+- **HTTP Request Parsing** — extracts method, path, headers, and body from raw requests
+- **Dynamic Routing** — path-based request handling
+- **Status Codes** — `200 OK`, `201 Created`, `404 Not Found`, `500 Internal Server Error`
+- **Echo Endpoint** — `/echo/{str}` echoes back the provided string
+- **Content Headers** — correct `Content-Type` and `Content-Length` on all responses
+- **Concurrent Connections** — one thread per client via `std::thread`
+- **File Serving** — GET `/files/{name}` serves files from a configurable directory
+- **File Upload** — POST `/files/{name}` writes request body to disk
+- **GZIP Compression** — compresses responses when client sends `Accept-Encoding: gzip`
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
@@ -51,7 +66,7 @@ Built as part of the CodeCrafters "Build Your Own HTTP Server" challenge.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Custom-HTTP-Server/
@@ -68,7 +83,7 @@ Custom-HTTP-Server/
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 
@@ -82,19 +97,18 @@ sudo pacman -S cmake gcc zlib
 sudo apt install cmake g++ zlib1g-dev
 ```
 
-### Build & Run
+### Build and Run
 
 ```bash
-git clone https://github.com/yuvc21/custom-http-server.git
-cd custom-http-server
+git clone https://github.com/yuvc21/Custom-HTTP-Server.git
+cd Custom-HTTP-Server
 
 chmod +x run.sh
 ./run.sh --directory /tmp
 ```
 
-That's it. `run.sh` builds and starts the server in one shot.
+`run.sh` builds and starts the server in one shot. To rebuild from scratch:
 
-To rebuild from scratch:
 ```bash
 rm -rf build/
 ./run.sh --directory /tmp
@@ -102,7 +116,7 @@ rm -rf build/
 
 ---
 
-## 💻 Usage
+## Usage
 
 ```bash
 # start server (serves files from /tmp)
@@ -116,7 +130,7 @@ Server listens on `0.0.0.0:4221`.
 
 ---
 
-## 🌐 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -127,39 +141,7 @@ Server listens on `0.0.0.0:4221`.
 
 ---
 
-## 🧪 Testing
-
-Start the server in one terminal:
-```bash
-./run.sh --directory /tmp
-```
-
-Then in another terminal:
-
-```bash
-# root
-curl -i http://localhost:4221/
-
-# echo
-curl -i http://localhost:4221/echo/hello
-
-# 404
-curl -i http://localhost:4221/nonexistent
-
-# upload a file, then fetch it
-curl -i -X POST http://localhost:4221/files/test.txt -d "hello server"
-curl -i http://localhost:4221/files/test.txt
-
-# gzip compression
-curl -i --compressed -H "Accept-Encoding: gzip" http://localhost:4221/echo/hello
-
-# concurrent stress test (20 requests)
-for i in {1..20}; do curl -s http://localhost:4221/echo/test & done; wait && echo "all done"
-```
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ### Request Flow
 
@@ -192,21 +174,54 @@ send() → close()
 
 ---
 
-## 🗺️ Roadmap
+## Testing
 
-### Phase 1 — Core ✅
+Start the server in one terminal:
+
+```bash
+./run.sh --directory /tmp
+```
+
+Then in another terminal:
+
+```bash
+# root
+curl -i http://localhost:4221/
+
+# echo
+curl -i http://localhost:4221/echo/hello
+
+# 404
+curl -i http://localhost:4221/nonexistent
+
+# upload a file, then fetch it
+curl -i -X POST http://localhost:4221/files/test.txt -d "hello server"
+curl -i http://localhost:4221/files/test.txt
+
+# gzip compression
+curl -i --compressed -H "Accept-Encoding: gzip" http://localhost:4221/echo/hello
+
+# concurrent stress test (20 requests)
+for i in {1..20}; do curl -s http://localhost:4221/echo/test & done; wait && echo "all done"
+```
+
+---
+
+## Roadmap
+
+### Phase 1 — Core
 - [x] TCP socket server
 - [x] HTTP request parsing
 - [x] Response generation (200, 404)
 - [x] Echo endpoint
 
-### Phase 2 — Features ✅
+### Phase 2 — Features
 - [x] Multi-threaded connection handling
 - [x] Static file serving (GET)
 - [x] File upload (POST)
 - [x] GZIP compression
 
-### Phase 3 — Improvements 📅
+### Phase 3 — Improvements
 - [ ] Keep-Alive connections
 - [ ] Request timeout handling
 - [ ] Proper logging
@@ -214,7 +229,7 @@ send() → close()
 
 ---
 
-## 📝 License
+## License
 
 MIT — see [LICENSE](LICENSE).
 
